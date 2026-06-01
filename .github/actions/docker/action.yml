@@ -1,0 +1,125 @@
+name: Docker Build
+description: Build QGC using Docker
+
+inputs:
+  dockerfile:
+    description: Dockerfile to use
+    required: false
+    default: 'Dockerfile-build-ubuntu'
+  build-type:
+    description: CMake build type (Release or Debug)
+    required: false
+    default: 'Release'
+  fuse:
+    description: Enable FUSE support (required for AppImage builds)
+    required: false
+    default: 'false'
+  docker-username:
+    description: Docker Hub username
+    required: false
+    default: ''
+  docker-token:
+    description: Docker Hub token
+    required: false
+    default: ''
+  push-image:
+    description: "Image reference (e.g. dronecode/qgroundcontrol) to push the builder to. Empty = don't push."
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Set up setup-qemu-action
+      uses: docker/setup-qemu-action@v4
+      with:
+        cache-image: ${{ github.event_name != 'pull_request' }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+
+    - name: Login to Docker Hub
+      if: inputs.docker-token != '' && inputs.docker-username != ''
+      uses: docker/login-action@v4
+      with:
+        username: ${{ inputs.docker-username }}
+        password: ${{ inputs.docker-token }}
+
+    - name: Login to GHCR
+      if: github.event.pull_request.head.repo.fork != true
+      uses: docker/login-action@v4
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+
+    - name: Resolve GHCR cache ref
+      id: ghcr
+      shell: bash
+      run: echo "ref=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/qgroundcontrol-build-cache" >> "$GITHUB_OUTPUT"
+
+    - name: Validate inputs
+      shell: bash
+      run: |
+        python3 "${GITHUB_WORKSPACE}/.github/scripts/docker_helper.py" validate \
+          --dockerfile "${{ inputs.dockerfile }}" \
+          --build-type "${{ inputs.build-type }}"
+
+    - name: Resolve image tags
+      id: tags
+      shell: bash
+      env:
+        PUSH_IMAGE: ${{ inputs.push-image }}
+        DOCKERFILE: ${{ inputs.dockerfile }}
+        SHA: ${{ github.sha }}
+      run: |
+        case "$DOCKERFILE" in
+          Dockerfile-build-ubuntu)  suffix=linux ;;
+          Dockerfile-build-android) suffix=android ;;
+          *)                        suffix="${DOCKERFILE#Dockerfile-build-}" ;;
+        esac
+        local_tag="dronecode/qgroundcontrol:${suffix}"
+        if [[ -n "$PUSH_IMAGE" ]]; then
+          tags="${PUSH_IMAGE}:${suffix},${PUSH_IMAGE}:${suffix}-${SHA::7}"
+          push=true
+          local_alias_source="${PUSH_IMAGE}:${suffix}"
+        else
+          tags="${local_tag}"
+          push=false
+          local_alias_source=""
+        fi
+        {
+          echo "tags=${tags}"
+          echo "push=${push}"
+          echo "local_tag=${local_tag}"
+          echo "local_alias_source=${local_alias_source}"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Build Docker image
+      if: contains(fromJSON('["Dockerfile-build-ubuntu", "Dockerfile-build-android"]'), inputs.dockerfile)
+      uses: docker/build-push-action@v7
+      with:
+        context: .
+        file: ./deploy/docker/${{ inputs.dockerfile }}
+        tags: ${{ steps.tags.outputs.tags }}
+        load: true
+        push: ${{ steps.tags.outputs.push }}
+        cache-from: type=registry,ref=${{ steps.ghcr.outputs.ref }}:${{ inputs.dockerfile }}
+        cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}:{1},mode=max', steps.ghcr.outputs.ref, inputs.dockerfile) || '' }}
+
+    - name: Re-tag pushed image for local run
+      if: steps.tags.outputs.local_alias_source != '' && steps.tags.outputs.local_alias_source != steps.tags.outputs.local_tag
+      shell: bash
+      run: docker tag "${{ steps.tags.outputs.local_alias_source }}" "${{ steps.tags.outputs.local_tag }}"
+
+    - name: Run Docker build
+      if: contains(fromJSON('["Release", "Debug"]'), inputs.build-type)
+      shell: bash
+      env:
+        ENABLE_FUSE: ${{ inputs.fuse }}
+        IMAGE: ${{ steps.tags.outputs.local_tag }}
+      run: |
+        chmod +x ./deploy/docker/docker-run.sh
+        ARGS=(run --image "$IMAGE" --build-type "${{ inputs.build-type }}")
+        [[ "$ENABLE_FUSE" == "true" ]] && ARGS+=(--fuse)
+        python3 "${GITHUB_WORKSPACE}/.github/scripts/docker_helper.py" "${ARGS[@]}"

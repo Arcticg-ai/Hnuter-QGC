@@ -1,0 +1,25 @@
+name: Cache Cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to clean (leave empty for all branches)'
+        required: false
+        type: string
+      dry-run:
+        description: 'List caches without deleting'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    uses: ./.github/workflows/_cache-cleanup.yml
+    with:
+      branch: ${{ inputs.branch }}
+      dry-run: ${{ inputs.dry-run }}
+      summary: true
