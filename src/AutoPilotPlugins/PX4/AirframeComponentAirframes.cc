@@ -1,7 +1,32 @@
 #include "AirframeComponentAirframes.h"
 #include <QtCore/QFile>
+#include <QtCore/QFileInfo>
+#include <QtCore/QStringList>
 
 QMap<QString, AirframeComponentAirframes::AirframeType_t*> AirframeComponentAirframes::rgAirframeTypes;
+
+static QString airframeImageResource(const QString& image)
+{
+    QStringList candidates;
+    if (QFileInfo(image).suffix().isEmpty()) {
+        candidates << QStringLiteral("%1.png").arg(image)
+                   << QStringLiteral("%1.jpg").arg(image)
+                   << QStringLiteral("%1.jpeg").arg(image)
+                   << QStringLiteral("%1.webp").arg(image)
+                   << QStringLiteral("%1.svg").arg(image);
+    } else {
+        candidates << image;
+    }
+
+    for (const QString& candidate: candidates) {
+        const QString resourcePath = QStringLiteral(":/qmlimages/Airframe/%1").arg(candidate);
+        if (QFile::exists(resourcePath)) {
+            return QStringLiteral("qrc%1").arg(resourcePath);
+        }
+    }
+
+    return QString();
+}
 
 QMap<QString, AirframeComponentAirframes::AirframeType_t*>& AirframeComponentAirframes::get() {
 
@@ -41,12 +66,7 @@ void AirframeComponentAirframes::insert(QString& group, QString& image, QString&
         g->name = group;
 
         if (image.length() > 0) {
-            g->imageResource = QString(":/qmlimages/Airframe/%1.svg").arg(image);
-            if (!QFile::exists(g->imageResource)) {
-                g->imageResource.clear();
-            } else {
-                g->imageResource.prepend(QStringLiteral("qrc"));
-            }
+            g->imageResource = airframeImageResource(image);
         }
 
         if (g->imageResource.isEmpty()) {

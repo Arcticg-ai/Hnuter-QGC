@@ -80,6 +80,7 @@ qt_add_resources(${CMAKE_PROJECT_NAME} autopilot_plugin_common_airframes
         "${CMAKE_SOURCE_DIR}/src/AutoPilotPlugins/Common/Images/HelicopterCoaxial.svg"
         "${CMAKE_SOURCE_DIR}/src/AutoPilotPlugins/Common/Images/HexaRotorPlus.svg"
         "${CMAKE_SOURCE_DIR}/src/AutoPilotPlugins/Common/Images/HexaRotorX.svg"
+        "${CMAKE_SOURCE_DIR}/src/AutoPilotPlugins/Common/Images/HnuterTiltrotorT.png"
         "${CMAKE_SOURCE_DIR}/src/AutoPilotPlugins/Common/Images/HnuterTiltrotorT.svg"
         "${CMAKE_SOURCE_DIR}/src/AutoPilotPlugins/Common/Images/OctoRotorPlus.svg"
         "${CMAKE_SOURCE_DIR}/src/AutoPilotPlugins/Common/Images/OctoRotorPlusCoaxial.svg"
