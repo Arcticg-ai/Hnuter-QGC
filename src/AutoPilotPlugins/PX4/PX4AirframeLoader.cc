@@ -175,5 +175,7 @@ void PX4AirframeLoader::loadAirframeMetaData(void)
         xml.readNext();
     }
 
+    AirframeComponentAirframes::ensureHnuterTiltrotor();
+
     _airframeMetaDataLoaded = true;
 }

@@ -17,15 +17,20 @@ Item {
     property Fact sysAutoStartFact: controller.getParameterFact(-1, "SYS_AUTOSTART")
 
     property bool autoStartSet: sysAutoStartFact ? (sysAutoStartFact.value !== 0) : false
-    property string firmwareVersionText: globals.activeVehicle.firmwareMajorVersion === -1 ?
-                                             qsTr("Unknown") :
-                                             globals.activeVehicle.firmwareMajorVersion + "." +
-                                             globals.activeVehicle.firmwareMinorVersion + "." +
-                                             globals.activeVehicle.firmwarePatchVersion +
-                                             globals.activeVehicle.firmwareVersionTypeString
+    property bool gitHashAvailable: globals.activeVehicle.gitHash && globals.activeVehicle.gitHash.length > 0
     property string gitHashText: globals.activeVehicle.gitHash && globals.activeVehicle.gitHash.length > 0 ?
                                      globals.activeVehicle.gitHash :
                                      qsTr("Unknown")
+    property bool firmwareVersionValid: globals.activeVehicle.firmwareMajorVersion !== -1 &&
+                                        (globals.activeVehicle.firmwareMajorVersion !== 0 ||
+                                         globals.activeVehicle.firmwareMinorVersion !== 0 ||
+                                         globals.activeVehicle.firmwarePatchVersion !== 0)
+    property string firmwareVersionText: firmwareVersionValid ?
+                                             globals.activeVehicle.firmwareMajorVersion + "." +
+                                             globals.activeVehicle.firmwareMinorVersion + "." +
+                                             globals.activeVehicle.firmwarePatchVersion +
+                                             globals.activeVehicle.firmwareVersionTypeString :
+                                             (gitHashAvailable ? qsTr("Git ") + gitHashText : qsTr("Unknown"))
 
     ColumnLayout {
         id: mainLayout

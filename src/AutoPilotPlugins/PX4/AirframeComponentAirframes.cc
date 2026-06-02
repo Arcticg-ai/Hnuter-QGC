@@ -28,6 +28,19 @@ static QString airframeImageResource(const QString& image)
     return QString();
 }
 
+static bool airframeExists(int id)
+{
+    for (const AirframeComponentAirframes::AirframeType_t* type: AirframeComponentAirframes::get()) {
+        for (const AirframeComponentAirframes::AirframeInfo_t* info: type->rgAirframeInfo) {
+            if (info->autostartId == id) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 QMap<QString, AirframeComponentAirframes::AirframeType_t*>& AirframeComponentAirframes::get() {
 
 #if 0
@@ -56,26 +69,25 @@ void AirframeComponentAirframes::insert(QString& group, QString& image, QString&
     const bool hnuterTiltrotor = id == 4051 ||
             group.contains(QStringLiteral("Hnuter"), Qt::CaseInsensitive) ||
             name.contains(QStringLiteral("Hnuter"), Qt::CaseInsensitive);
-    if (hnuterTiltrotor) {
-        image = QStringLiteral("HnuterTiltrotorT");
-    }
+    const QString displayGroup = hnuterTiltrotor ? QStringLiteral("Hnuter Tiltrotor") : group;
+    const QString displayImage = hnuterTiltrotor ? QStringLiteral("HnuterTiltrotorT") : image;
 
     AirframeType_t *g;
-    if (!rgAirframeTypes.contains(group)) {
+    if (!rgAirframeTypes.contains(displayGroup)) {
         g = new AirframeType_t;
-        g->name = group;
+        g->name = displayGroup;
 
-        if (image.length() > 0) {
-            g->imageResource = airframeImageResource(image);
+        if (displayImage.length() > 0) {
+            g->imageResource = airframeImageResource(displayImage);
         }
 
         if (g->imageResource.isEmpty()) {
             g->imageResource = QString("qrc:/qmlimages/Airframe/AirframeUnknown.svg");
         }
 
-        rgAirframeTypes.insert(group, g);
+        rgAirframeTypes.insert(displayGroup, g);
     } else {
-        g = rgAirframeTypes.value(group);
+        g = rgAirframeTypes.value(displayGroup);
     }
 
     AirframeInfo_t *i = new AirframeInfo_t;
@@ -83,6 +95,18 @@ void AirframeComponentAirframes::insert(QString& group, QString& image, QString&
     i->autostartId = id;
 
     g->rgAirframeInfo.append(i);
+}
+
+void AirframeComponentAirframes::ensureHnuterTiltrotor()
+{
+    if (airframeExists(4051)) {
+        return;
+    }
+
+    QString group = QStringLiteral("Hnuter Tiltrotor");
+    QString image = QStringLiteral("HnuterTiltrotorT");
+    QString name = QStringLiteral("Hnuter T Tiltrotor");
+    insert(group, image, name, 4051);
 }
 
 void AirframeComponentAirframes::clear() {

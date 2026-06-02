@@ -343,12 +343,9 @@ void InitialConnectStateMachine::_handleAutopilotVersionSuccess(const mavlink_me
     }
 
     if (vehicle()->px4Firmware()) {
-        // Lower 3 bytes is custom version
-        int majorVersion, minorVersion, patchVersion;
-        majorVersion = autopilotVersion.flight_custom_version[2];
-        minorVersion = autopilotVersion.flight_custom_version[1];
-        patchVersion = autopilotVersion.flight_custom_version[0];
-        vehicle()->setFirmwareCustomVersion(majorVersion, minorVersion, patchVersion);
+        // PX4 uses flight_custom_version for the git hash. Treating those bytes
+        // as major/minor/patch produces misleading values such as 0.0.0.
+        vehicle()->setFirmwareCustomVersion(Vehicle::versionNotSetValue, Vehicle::versionNotSetValue, Vehicle::versionNotSetValue);
 
         // PX4 Firmware stores the first 16 characters of the git hash as binary, with the individual bytes in reverse order
         vehicle()->_gitHash = "";
