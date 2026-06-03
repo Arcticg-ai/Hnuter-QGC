@@ -70,6 +70,36 @@ def _detect_just_version() -> tuple[int, ...] | None:
         return None
     return tuple(int(g) for g in match.groups(default="0"))
 
+def _parse_version(text: str) -> tuple[int, ...] | None:
+    match = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", text)
+    if not match:
+        return None
+    return tuple(int(g) for g in match.groups(default="0"))
+
+def _command_version(command: str) -> tuple[int, ...] | None:
+    if not _c.has_command(command):
+        return None
+    try:
+        out = subprocess.run(
+            [command, "--version"], capture_output=True, text=True, check=True, timeout=5
+        ).stdout
+    except (subprocess.SubprocessError, OSError):
+        return None
+    return _parse_version(out)
+
+def _pipx_package_satisfied(package: str) -> bool:
+    installed = _command_version(package)
+    if installed is None:
+        return False
+
+    if package == "cmake":
+        minimum = _c.get_config_value("cmake_minimum_version")
+        required = _parse_version(minimum or "")
+        if required and installed < required:
+            return False
+
+    return True
+
 def install_just_debian(dry_run: bool = False) -> bool:
     """Install `just` via apt when available, else from upstream prebuilt binary.
 
@@ -183,6 +213,9 @@ def install_debian(
         print("\nInstalling pipx packages...")
         _c.run_command(["pipx", "ensurepath"], dry_run)
         for pkg in PIPX_PACKAGES:
+            if _pipx_package_satisfied(pkg):
+                print(f"  Skipping pipx package {pkg}; system command is already available")
+                continue
             if not _c.run_command(["pipx", "install", pkg], dry_run):
                 _c.log_error(f"Failed to install pipx package: {pkg}")
                 return False

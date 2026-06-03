@@ -177,10 +177,10 @@ function(gstreamer_resilient_download)
     endif()
 
     if(NOT ARG_TIMEOUT)
-        set(ARG_TIMEOUT 120)
+        set(ARG_TIMEOUT 900)
     endif()
     if(NOT ARG_INACTIVITY_TIMEOUT)
-        set(ARG_INACTIVITY_TIMEOUT 60)
+        set(ARG_INACTIVITY_TIMEOUT 180)
     endif()
 
     set(_dest "${ARG_DESTINATION_DIR}/${ARG_FILENAME}")
@@ -259,9 +259,10 @@ function(gstreamer_download_sdk PLATFORM VERSION FILENAME DESTINATION_DIR RESULT
     gstreamer_get_s3_mirror_url(${PLATFORM} ${VERSION} _s3_url)
     gstreamer_fetch_checksum(${PLATFORM} ${VERSION} _hash)
 
-    set(_urls "${_url}")
     if(_s3_url)
-        list(APPEND _urls "${_s3_url}")
+        set(_urls "${_s3_url}" "${_url}")
+    else()
+        set(_urls "${_url}")
     endif()
 
     set(_args

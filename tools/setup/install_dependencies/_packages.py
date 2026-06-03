@@ -19,6 +19,7 @@ DEBIAN_PACKAGES: dict[str, list[str]] = {
         "cppcheck",
         "file",
         "gdb",
+        "gcovr",
         "gettext",
         "git",
         "libfuse2",
